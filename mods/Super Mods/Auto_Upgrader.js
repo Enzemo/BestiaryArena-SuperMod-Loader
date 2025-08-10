@@ -44,9 +44,31 @@
   }
 
   function getEligibleBaseForSpecies(speciesId) {
-    const monsters = getPlayerMonsters().filter(m => getSpeciesKey(m) === speciesId);
-    const candidates = monsters.filter(m => isAtOrAboveLevelThreshold(m) && Number(m?.tier || 1) < 5);
-    if (candidates.length === 0) return null;
+    const normalizeId = (v) => String(v);
+    const threshold = Number(config.levelThreshold || 50) || 50;
+    const monsters = getPlayerMonsters().filter(m => normalizeId(getSpeciesKey(m)) === normalizeId(speciesId));
+
+    // Candidates must be below tier 5 and at or above threshold level
+    const candidates = monsters.filter(m => Number(m?.tier || 1) < 5 && Number(m?.level || 0) >= threshold);
+
+    if (candidates.length === 0) {
+      // Provide diagnostics to help users understand why none were found
+      const maxLevelInSpecies = monsters.reduce((mx, m) => Math.max(mx, Number(m?.level || 0)), 0);
+      const tierCounts = monsters.reduce((acc, m) => {
+        const t = Number(m?.tier || 1);
+        acc[t] = (acc[t] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('[Auto Upgrader] No eligible base found', {
+        speciesId,
+        threshold,
+        monstersInSpecies: monsters.length,
+        maxLevelInSpecies,
+        tierCounts
+      });
+      return null;
+    }
+
     candidates.sort((a, b) => (b.tier || 1) - (a.tier || 1) || (b.level || 0) - (a.level || 0));
     return candidates[0];
   }
@@ -162,7 +184,7 @@
       matched.click();
       return true;
     }
-    const lists = Array.from(modalEl.querySelectorAll('div, section')); 
+    const lists = Array.from(modalEl.querySelectorAll('div, section'));
     for (const list of lists) {
       const items = list.querySelectorAll('button, div');
       for (const it of items) {
@@ -225,6 +247,9 @@
       }
 
       const picked = pickBaseMonsterInUI(modal, baseMonster);
+      if (!picked) {
+        console.log('[Auto Upgrader] Failed to pick base in UI', { speciesId, baseId: baseMonster?.id });
+      }
       await sleep(200);
 
       const fodders = getFodderForSpecies(speciesId, baseMonster.id).slice(0, 3);
@@ -239,7 +264,7 @@
       if (picked && (added > 0) && confirmed) {
         notify(`Upgraded ${speciesId} successfully.`, 'success');
       } else {
-        notify(`Attempted upgrade for ${speciesId}. Check game UI.`, 'warning');
+        notify(`No eligible base monster found at threshold or UI selection failed.`, 'warning');
       }
     } catch (e) {
       notify(`Upgrade sequence error: ${e?.message || e}`, 'error');
@@ -258,14 +283,15 @@
     stopMonitoring();
     const board = globalThis.state?.player;
     if (!board || typeof board.subscribe !== 'function') return;
+    const normalizeId = (v) => String(v);
+    const selected = new Set((config.targetSpeciesIds || []).map(normalizeId));
     playerUnsubscribe = board.subscribe(({ context: ctx }) => {
       if (!config.enabled) return;
-      if (!Array.isArray(config.targetSpeciesIds) || config.targetSpeciesIds.length === 0) return;
-      const speciesSet = new Set(config.targetSpeciesIds);
+      if (selected.size === 0) return;
       const monsters = Array.isArray(ctx?.monsters) ? ctx.monsters : [];
       for (const m of monsters) {
-        const speciesId = getSpeciesKey(m);
-        if (!speciesSet.has(speciesId)) continue;
+        const speciesId = normalizeId(getSpeciesKey(m));
+        if (!selected.has(speciesId)) continue;
         if ((m.tier || 1) >= 5) continue;
         if (!isAtOrAboveLevelThreshold(m)) continue;
         enqueueSpecies(speciesId);
