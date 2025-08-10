@@ -223,7 +223,8 @@ async function listAllModFiles() {
       'Super Mods/Cyclopedia.js',
       'Super Mods/DashboardButton.js',
       'Super Mods/Dice_Roller.js',
-      'Super Mods/Hunt Analyzer.js'
+      'Super Mods/Hunt Analyzer.js',
+      'Super Mods/Auto_Upgrader.js'
     ];
     return [...databaseMods, ...officialMods, ...superMods];
   } catch (e) {
