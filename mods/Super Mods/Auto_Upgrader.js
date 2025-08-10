@@ -292,24 +292,42 @@
     const right = document.createElement('div');
     right.style.flex = '1 1 0';
 
-    const monsters = getPlayerMonsters();
+    // Filter to only show monsters under level 50 in the selector
+    const allMonsters = getPlayerMonsters();
+    const monstersUnder50 = allMonsters.filter(m => Number(m?.level || 0) < 50);
+
+    // Group by species (gameId)
     const bySpecies = new Map();
-    for (const m of monsters) {
+    for (const m of monstersUnder50) {
       const key = getSpeciesKey(m);
       if (!bySpecies.has(key)) bySpecies.set(key, []);
       bySpecies.get(key).push(m);
     }
 
+    // Helper to resolve monster name from utils
+    function getMonsterNameFromId(monsterId) {
+      try {
+        const info = globalThis.state?.utils?.getMonster?.(monsterId);
+        return info?.metadata?.name || `Monster ${monsterId}`;
+      } catch {
+        return `Monster ${monsterId}`;
+      }
+    }
+
     const scroll = api.ui.components.createScrollContainer({ height: 360, padding: true, content: '' });
     const selectedSet = new Set(config.targetSpeciesIds || []);
 
+    // Build UI rows for species that have at least one monster under level 50
     bySpecies.forEach((arr, speciesId) => {
+      if (!arr || arr.length === 0) return;
+
       const row = document.createElement('div');
       row.style.display = 'flex';
       row.style.alignItems = 'center';
       row.style.gap = '8px';
       row.style.margin = '2px 0';
 
+      // Use a representative under-50 monster for portrait
       const representative = arr[0];
       const tier = Math.max(...arr.map(x => x.tier || 1));
       const portrait = api.ui.components.createMonsterPortrait({
@@ -323,7 +341,8 @@
       label.style.flex = '1 1 0';
       label.style.color = 'white';
       label.style.cursor = 'pointer';
-      label.textContent = `Species ${speciesId} (x${arr.length})`;
+      const monsterName = getMonsterNameFromId(getSpeciesKey(representative));
+      label.textContent = `${monsterName} (x${arr.length})`;
       label.addEventListener('click', () => toggleSpecies(speciesId));
 
       const checkbox = document.createElement('input');
