@@ -209,7 +209,8 @@ async function listAllModFiles() {
       'Official Mods/Setup_Manager.js',
       'Official Mods/Team_Copier.js',
       'Official Mods/Tick_Tracker.js',
-      'Official Mods/Turbo Mode.js'
+      'Official Mods/Turbo Mode.js',
+      'Official Mods/Hello_World_Mod.js'
     ];
     const superMods = [
       'Super Mods/Autoseller.js',
@@ -222,7 +223,8 @@ async function listAllModFiles() {
       'Super Mods/Cyclopedia.js',
       'Super Mods/DashboardButton.js',
       'Super Mods/Dice_Roller.js',
-      'Super Mods/Hunt Analyzer.js'
+      'Super Mods/Hunt Analyzer.js',
+      'Super Mods/Auto_Upgrader.js'
     ];
     return [...databaseMods, ...officialMods, ...superMods];
   } catch (e) {
@@ -240,6 +242,7 @@ async function listAllModFiles() {
       'Official Mods/Team_Copier.js',
       'Official Mods/Tick_Tracker.js',
       'Official Mods/Turbo Mode.js',
+      'Official Mods/Hello_World_Mod.js',
       'Super Mods/Autoseller.js',
       'Super Mods/Autoscroller.js',
       'Super Mods/Better Analytics.js',
