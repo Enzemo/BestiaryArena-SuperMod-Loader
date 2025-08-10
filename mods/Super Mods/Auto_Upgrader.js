@@ -445,10 +445,10 @@
 
   function openConfigPanel() {
     const content = buildConfigContent();
-    api.ui.components.createModal({
+    const modal = api.ui.components.createModal({
       title: 'Auto Upgrader',
-      width: 700,
-      height: 400,
+      width: 970,
+      height: 600,
       content: content,
       buttons: [
         {
@@ -465,6 +465,26 @@
         { text: 'Close', primary: false }
       ]
     });
+
+    // Ensure width/height are applied even with fallback modal
+    setTimeout(() => {
+      const dialog = document.querySelector('div[role="dialog"][data-state="open"]');
+      if (dialog) {
+        dialog.style.width = '970px';
+        dialog.style.minWidth = '970px';
+        dialog.style.maxWidth = '970px';
+        dialog.style.height = '600px';
+        dialog.style.minHeight = '600px';
+        dialog.style.maxHeight = '600px';
+        const contentElem = dialog.querySelector('.modal-content, [data-content], .content, .modal-body');
+        if (contentElem) {
+          contentElem.style.width = '970px';
+          contentElem.style.height = '600px';
+          contentElem.style.display = 'flex';
+          contentElem.style.flexDirection = 'column';
+        }
+      }
+    }, 100);
   }
 
   function initUI() {
