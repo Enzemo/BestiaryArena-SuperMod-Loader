@@ -6,7 +6,8 @@
     minFodderTier: 1,
     maxFodderTier: 4,
     targetSpeciesIds: [],
-    concurrentUpgrades: 1
+    concurrentUpgrades: 1,
+    debug: false
   };
 
   const api = context && context.api ? context.api : (window && window.BestiaryModAPI ? window.BestiaryModAPI : null);
@@ -48,29 +49,20 @@
     const threshold = Number(config.levelThreshold || 50) || 50;
     const monsters = getPlayerMonsters().filter(m => normalizeId(getSpeciesKey(m)) === normalizeId(speciesId));
 
-    // Candidates must be below tier 5 and at or above threshold level
     const candidates = monsters.filter(m => Number(m?.tier || 1) < 5 && Number(m?.level || 0) >= threshold);
 
     if (candidates.length === 0) {
-      // Provide diagnostics to help users understand why none were found
       const maxLevelInSpecies = monsters.reduce((mx, m) => Math.max(mx, Number(m?.level || 0)), 0);
-      const tierCounts = monsters.reduce((acc, m) => {
-        const t = Number(m?.tier || 1);
-        acc[t] = (acc[t] || 0) + 1;
-        return acc;
-      }, {});
-      console.log('[Auto Upgrader] No eligible base found', {
-        speciesId,
-        threshold,
-        monstersInSpecies: monsters.length,
-        maxLevelInSpecies,
-        tierCounts
-      });
+      const tierCounts = monsters.reduce((acc, m) => { const t = Number(m?.tier || 1); acc[t] = (acc[t] || 0) + 1; return acc; }, {});
+      const diag = { speciesId, threshold, monstersInSpecies: monsters.length, maxLevelInSpecies, tierCounts };
+      logDebug('No eligible base found for species', diag);
       return null;
     }
 
     candidates.sort((a, b) => (b.tier || 1) - (a.tier || 1) || (b.level || 0) - (a.level || 0));
-    return candidates[0];
+    const chosen = candidates[0];
+    logDebug('Eligible base chosen', { speciesId, baseId: chosen?.id, level: chosen?.level, tier: chosen?.tier });
+    return chosen;
   }
 
   function getFodderForSpecies(speciesId, baseId) {
@@ -131,19 +123,20 @@
   }
 
   async function openMountainFortress() {
+    logDebug('Opening Mountain Fortress...');
     const openedViaMenu = tryOpenMountainFortressViaMenu();
     if (openedViaMenu) {
       for (let i = 0; i < 20; i++) {
-        if (findFortressModal()) return true;
+        if (findFortressModal()) { logDebug('Mountain Fortress opened via menu'); return true; }
         await sleep(150);
       }
     }
 
     const icon = document.querySelector('img[src*="mountainfortress"]');
     if (icon) {
-      icon.click();
+      try { icon.click(); } catch {}
       for (let i = 0; i < 20; i++) {
-        if (findFortressModal()) return true;
+        if (findFortressModal()) { logDebug('Mountain Fortress opened via icon'); return true; }
         await sleep(150);
       }
     }
@@ -151,13 +144,14 @@
     const fortressText = Array.from(document.querySelectorAll('button, div, span, p, h2, h3'))
       .find(el => /mountain\s*fortress/i.test(el.textContent || ''));
     if (fortressText && fortressText.closest('button')) {
-      fortressText.closest('button').click();
+      try { fortressText.closest('button').click(); } catch {}
       for (let i = 0; i < 20; i++) {
-        if (findFortressModal()) return true;
+        if (findFortressModal()) { logDebug('Mountain Fortress opened via text button'); return true; }
         await sleep(150);
       }
     }
 
+    logDebug('Mountain Fortress failed to open');
     return !!findFortressModal();
   }
 
@@ -234,6 +228,7 @@
 
   async function performUpgradeSequence(speciesId, baseMonster) {
     try {
+      logDebug('Starting upgrade sequence', { speciesId, baseId: baseMonster?.id, level: baseMonster?.level, tier: baseMonster?.tier });
       const opened = await openMountainFortress();
       if (!opened) {
         notify(`Could not open Mountain Fortress. Please open it manually and try again.`, 'error');
@@ -247,22 +242,22 @@
       }
 
       const picked = pickBaseMonsterInUI(modal, baseMonster);
-      if (!picked) {
-        console.log('[Auto Upgrader] Failed to pick base in UI', { speciesId, baseId: baseMonster?.id });
-      }
-      await sleep(200);
+      logDebug('Base selection result', { picked });
+      await sleep(300);
 
       const fodders = getFodderForSpecies(speciesId, baseMonster.id).slice(0, 3);
       const added = addFodderInUI(modal, fodders);
-      await sleep(200);
+      logDebug('Fodder selection result', { requested: fodders.length, added });
+      await sleep(300);
 
       const confirmed = await confirmUpgrade(modal);
-      await sleep(200);
+      logDebug('Confirm result', { confirmed });
+      await sleep(300);
 
       closeFortressModal(modal);
 
       if (picked && (added > 0) && confirmed) {
-        notify(`Upgraded ${speciesId} successfully.`, 'success');
+        notify(`Upgraded successfully.`, 'success');
       } else {
         notify(`No eligible base monster found at threshold or UI selection failed.`, 'warning');
       }
@@ -277,6 +272,12 @@
       return;
     }
     api?.ui?.components?.createModal({ title: type, content: message, buttons: [{ text: 'OK', primary: true }] });
+  }
+
+  function logDebug(message, extra) {
+    if (!config.debug) return;
+    try { console.log('[Auto Upgrader]', message, extra || ''); } catch {}
+    notify(String(message), 'info');
   }
 
   function startMonitoring() {
@@ -402,6 +403,15 @@
     enabledRow.appendChild(enabledInput);
     enabledRow.appendChild(document.createTextNode(' Enable Auto-Upgrader'));
 
+    const debugRow = document.createElement('label');
+    debugRow.style.color = 'white';
+    const debugInput = document.createElement('input');
+    debugInput.type = 'checkbox';
+    debugInput.checked = !!config.debug;
+    debugInput.addEventListener('change', () => { config.debug = debugInput.checked; });
+    debugRow.appendChild(debugInput);
+    debugRow.appendChild(document.createTextNode(' Enable debug logs'));
+
     const levelRow = document.createElement('div');
     levelRow.style.display = 'flex';
     levelRow.style.gap = '8px';
@@ -475,6 +485,7 @@
     });
 
     settingsBox.appendChild(enabledRow);
+    settingsBox.appendChild(debugRow);
     settingsBox.appendChild(levelRow);
     settingsBox.appendChild(reserveRow);
     settingsBox.appendChild(tierRow);
