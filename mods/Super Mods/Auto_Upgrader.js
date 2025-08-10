@@ -342,7 +342,8 @@
     }
 
     const scroll = api.ui.components.createScrollContainer({ height: 360, padding: true, content: '' });
-    const selectedSet = new Set(config.targetSpeciesIds || []);
+    const normalizeId = (v) => String(v);
+    const selectedSet = new Set((config.targetSpeciesIds || []).map(normalizeId));
 
     // Build UI rows for species that have at least one monster under level 50
     bySpecies.forEach((arr, speciesId) => {
@@ -361,7 +362,7 @@
         monsterId: getSpeciesKey(representative),
         level: representative.level || 1,
         tier: tier || 1,
-        onClick: () => toggleSpecies(speciesId)
+        onClick: () => toggleSpecies(normalizeId(speciesId))
       });
 
       const label = document.createElement('span');
@@ -370,12 +371,12 @@
       label.style.cursor = 'pointer';
       const monsterName = getMonsterNameFromId(getSpeciesKey(representative));
       label.textContent = `${monsterName} (x${arr.length})`;
-      label.addEventListener('click', () => toggleSpecies(speciesId));
+      label.addEventListener('click', () => toggleSpecies(normalizeId(speciesId)));
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
-      checkbox.checked = selectedSet.has(speciesId);
-      checkbox.addEventListener('change', () => toggleSpecies(speciesId));
+      checkbox.checked = selectedSet.has(normalizeId(speciesId));
+      checkbox.addEventListener('change', () => toggleSpecies(normalizeId(speciesId)));
 
       row.appendChild(portrait);
       row.appendChild(label);
@@ -384,8 +385,15 @@
     });
 
     function toggleSpecies(speciesId) {
-      const idx = config.targetSpeciesIds.indexOf(speciesId);
-      if (idx === -1) config.targetSpeciesIds.push(speciesId); else config.targetSpeciesIds.splice(idx, 1);
+      const idStr = String(speciesId);
+      const list = (config.targetSpeciesIds || []).map(String);
+      const idx = list.indexOf(idStr);
+      if (idx === -1) {
+        config.targetSpeciesIds = [...list, idStr];
+      } else {
+        list.splice(idx, 1);
+        config.targetSpeciesIds = list;
+      }
     }
 
     left.appendChild(scroll.element);
@@ -477,11 +485,38 @@
     const testButton = document.createElement('button');
     testButton.textContent = 'Run Next Upgrade';
     testButton.addEventListener('click', async () => {
-      const species = (config.targetSpeciesIds || [])[0];
+      const first = (config.targetSpeciesIds || [])[0];
+      const species = first != null ? String(first) : null;
       if (!species) { notify('No target species selected', 'warning'); return; }
       const base = getEligibleBaseForSpecies(species);
       if (!base) { notify('No eligible base monster found at threshold', 'warning'); return; }
       await performUpgradeSequence(species, base);
+    });
+
+    const diagButton = document.createElement('button');
+    diagButton.textContent = 'Diagnostics';
+    diagButton.addEventListener('click', () => {
+      const first = (config.targetSpeciesIds || [])[0];
+      const species = first != null ? String(first) : null;
+      if (!species) { notify('No target species selected', 'warning'); return; }
+      const threshold = Number(config.levelThreshold || 50) || 50;
+      const speciesMonsters = getPlayerMonsters().filter(m => String(getSpeciesKey(m)) === species);
+      const eligible = speciesMonsters.filter(m => Number(m?.tier || 1) < 5 && Number(m?.level || 0) >= threshold);
+      const name = (() => { try { return globalThis.state?.utils?.getMonster?.(Number(species))?.metadata?.name || species; } catch { return species; } })();
+      const details = document.createElement('div');
+      details.style.color = 'white';
+      details.innerHTML = `
+        <p><b>Species:</b> ${name} (ID ${species})</p>
+        <p><b>Threshold:</b> ${threshold}</p>
+        <p><b>Total owned (any level):</b> ${speciesMonsters.length}</p>
+        <p><b>Eligible (level >= threshold, tier < 5):</b> ${eligible.length}</p>
+      `;
+      api.ui.components.createModal({
+        title: 'Auto Upgrader Diagnostics',
+        width: 500,
+        content: details,
+        buttons: [{ text: 'Close', primary: true }]
+      });
     });
 
     settingsBox.appendChild(enabledRow);
@@ -490,6 +525,7 @@
     settingsBox.appendChild(reserveRow);
     settingsBox.appendChild(tierRow);
     actionsRow.appendChild(testButton);
+    actionsRow.appendChild(diagButton);
     settingsBox.appendChild(actionsRow);
 
     right.appendChild(settingsBox);
