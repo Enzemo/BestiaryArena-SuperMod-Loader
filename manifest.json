@@ -42,7 +42,9 @@
   "host_permissions": [
     "*://*.gist.githubusercontent.com/*",
     "*://*.bestiaryarena.com/*",
-    "*://bestiaryarena.com/*"
+    "*://bestiaryarena.com/*",
+    "https://bestiaryarena.wiki.gg/*",
+    "https://*.fandom.com/*"
   ],
   "web_accessible_resources": [
     {
