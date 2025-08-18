@@ -111,8 +111,9 @@
 
   function getOwnedBySpecies() {
     try {
-      const playerCtx = globalThis.state?.player?.getSnapshot()?.context;
-      const monsters = Array.isArray(playerCtx?.monsters) ? playerCtx.monsters : [];
+      const snap = globalThis.state?.player?.getSnapshot?.();
+      const ctx = snap?.context;
+      const monsters = Array.isArray(ctx?.monsters) ? ctx.monsters : [];
       const map = new Map(); // gameId -> { maxTier, count }
       for (const m of monsters) {
         if (!m || typeof m.gameId !== 'number') continue;
