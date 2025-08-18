@@ -130,6 +130,11 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
+    try {
+      grid.style.setProperty('display', 'block', 'important');
+      grid.style.setProperty('width', '100%', 'important');
+      grid.style.setProperty('max-width', '100%', 'important');
+    } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -167,6 +172,13 @@
 
     for (const m of entries) {
       const card = renderMonsterCard(m.id, m.name, getLocationForName(m.name), null);
+      try {
+        card.style.setProperty('width', '100%', 'important');
+        card.style.setProperty('max-width', '100%', 'important');
+        card.style.setProperty('flex', '0 0 100%', 'important');
+        card.style.marginBottom = '8px';
+        card.style.display = 'block';
+      } catch (e) {}
       grid.appendChild(card);
     }
     container.appendChild(grid);
@@ -177,6 +189,11 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
+    try {
+      grid.style.setProperty('display', 'block', 'important');
+      grid.style.setProperty('width', '100%', 'important');
+      grid.style.setProperty('max-width', '100%', 'important');
+    } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -199,6 +216,13 @@
 
     for (const m of list) {
       const card = renderMonsterCard(m.id, m.name, m.location, m.tier);
+      try {
+        card.style.setProperty('width', '100%', 'important');
+        card.style.setProperty('max-width', '100%', 'important');
+        card.style.setProperty('flex', '0 0 100%', 'important');
+        card.style.marginBottom = '8px';
+        card.style.display = 'block';
+      } catch (e) {}
       grid.appendChild(card);
     }
     container.appendChild(grid);
