@@ -70,15 +70,15 @@ async def extract_name_tier_pairs(container: Locator, page: Page) -> List[Tuple[
             except Exception:
                 tier = ""
 
-        # Click to open details popover/modal to read name
+        # Try hover first to trigger tooltip with name
         await btn.scroll_into_view_if_needed()
-        await btn.click()
-        # Wait for any panel/popover opening (Radix often toggles data-state='open')
-        panel = page.locator("[data-state='open']").first
+        await btn.hover()
+        panel = page.locator("[role='tooltip'], [data-state='open']").last
         try:
             await panel.wait_for(timeout=2000)
         except Exception:
-            # try tooltip/dialog roles as fallback
+            # try dialog role as fallback (if hovering didn't work, click)
+            await btn.click()
             panel = page.get_by_role("dialog").first
             try:
                 await panel.wait_for(timeout=1500)
