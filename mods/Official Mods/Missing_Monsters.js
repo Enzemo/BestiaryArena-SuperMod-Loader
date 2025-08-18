@@ -21,7 +21,7 @@
     primary: false,
     onClick: async () => {
       const container = await buildModal();
-      api.ui.components.createModal({ title: MODAL_TITLE, width: 720, height: 'auto', content: container });
+      api.ui.components.createModal({ title: MODAL_TITLE, width: 560, height: 'auto', content: container });
     }
   });
 
@@ -29,7 +29,7 @@
     await ensureDataLoaded();
 
     const wrapper = document.createElement('div');
-    wrapper.style.minWidth = '640px';
+    wrapper.style.minWidth = '520px';
 
     // Nav buttons
     const nav = document.createElement('div');
@@ -123,7 +123,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
     grid.style.gap = '10px';
 
     const ownedSpecies = getOwnedBySpecies();
@@ -132,7 +132,7 @@
     const entries = [];
     for (const name of cache.wikiNames || []) {
       if (!name) continue;
-      const id = cache.nameToId?.get(String(name).toLowerCase()) ?? null;
+      const id = findIdForName(name);
       const isOwned = typeof id === 'number' ? ownedIds.has(id) : false;
       if (!isOwned) entries.push({ name, id });
     }
@@ -178,16 +178,14 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
     grid.style.gap = '10px';
 
     const ownedSpecies = getOwnedBySpecies();
-    const utils = globalThis.state?.utils;
     const list = [];
     for (const [gameId, info] of ownedSpecies.entries()) {
       if ((info.maxTier || 0) < 5) {
-        let name = null;
-        try { name = utils?.getMonster?.(gameId)?.metadata?.name || null; } catch (e) {}
+        const name = findNameForId(gameId);
         if (!name) continue; // Do not show ID-only entries
         const loc = cache.locationMap?.get(name.toLowerCase()) || null;
         list.push({ id: gameId, name, tier: info.maxTier || 0, location: loc });
@@ -208,6 +206,29 @@
     }
     container.appendChild(grid);
     return container;
+  }
+
+  function normalizeNameKey(n) {
+    return String(n || '').toLowerCase().replace(/\s*\(.+?\)\s*/g, '').replace(/[,·].*$/, '').replace(/[\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function findIdForName(name) {
+    if (!name) return null;
+    const key = normalizeNameKey(name);
+    let id = cache.nameToId?.get(key);
+    if (typeof id === 'number') return id;
+    // Try original lowercase key
+    id = cache.nameToId?.get(String(name).toLowerCase());
+    return typeof id === 'number' ? id : null;
+  }
+
+  function findNameForId(gameId) {
+    if (!cache.nameToId || cache.nameToId.size === 0) return null;
+    for (const [k, id] of cache.nameToId.entries()) {
+      if (id === gameId) return k; // key is lowercase normalized; acceptable to display
+    }
+    // As a last resort, use utils
+    try { return globalThis.state?.utils?.getMonster?.(gameId)?.metadata?.name || null; } catch (e) { return null; }
   }
 
   function renderMonsterCard(gameId, name, location, tierOrNull) {
@@ -266,6 +287,22 @@
     try {
       if (!cache.wikiNames || !Array.isArray(cache.wikiNames) || cache.wikiNames.length === 0) {
         cache.wikiNames = await fetchMonsterNamesFromWiki();
+        // Fallback if wiki empty: enumerate using utils
+        if (!cache.wikiNames || cache.wikiNames.length === 0) {
+          const names = [];
+          const utils = globalThis.state?.utils;
+          if (utils && typeof utils.getMonster === 'function') {
+            let misses = 0;
+            for (let i = 1; i <= 1500 && misses < 20; i++) {
+              try {
+                const d = utils.getMonster(i);
+                const nm = d?.metadata?.name;
+                if (nm) { names.push(nm); misses = 0; } else { misses++; }
+              } catch (e) { misses++; }
+            }
+          }
+          cache.wikiNames = names;
+        }
       }
       if (!cache.nameToId || !(cache.nameToId instanceof Map) || cache.nameToId.size === 0) {
         cache.nameToId = buildNameToIdIndex();
