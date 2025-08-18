@@ -8,9 +8,9 @@
   const MODAL_TITLE = 'Bestiary Helper';
 
   const cache = {
-    wikiNames: null,              // Array<string>
-    nameToId: null,               // Map<stringLower, gameId>
-    locationMap: null,            // Map<stringLower, string>
+    wikiNames: null,          // Array<string>
+    nameToId: null,           // Map<stringLowerNormalized, gameId>
+    locationMap: null,        // Map<stringLowerNormalized, locationText>
     fetching: false
   };
 
@@ -26,56 +26,67 @@
   });
 
   async function buildModal() {
+    ensureStyles();
+    await waitForUtils(1200);
     await ensureDataLoaded();
 
     const wrapper = document.createElement('div');
+    wrapper.className = 'mm-wrapper';
     wrapper.style.minWidth = '520px';
-    wrapper.style.maxWidth = '560px';
+    wrapper.style.maxWidth = '100%';
     wrapper.style.width = '100%';
-    wrapper.style.boxSizing = 'border-box';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.overflowX = 'hidden';
+    try { wrapper.style.setProperty('grid-column', '1 / -1', 'important'); } catch (e) {}
 
-    // Nav buttons
+    // Nav
     const nav = document.createElement('div');
     nav.style.display = 'flex';
     nav.style.gap = '8px';
     nav.style.marginBottom = '8px';
+    nav.style.flexWrap = 'wrap';
+    nav.style.maxWidth = '100%';
+    nav.style.width = '100%';
 
     const missingBtn = createNavButton('Missing', true);
     const notMaxBtn = createNavButton('Not Max Tier');
-
     nav.appendChild(missingBtn);
     nav.appendChild(notMaxBtn);
 
-    const contentArea = api.ui.components.createScrollContainer({ height: '60vh', padding: true });
-    const contentHost = contentArea.element || contentArea;
-    contentHost.style.width = '100%';
-    contentHost.style.maxWidth = '560px';
-    contentHost.style.boxSizing = 'border-box';
-    contentHost.style.overflowX = 'hidden';
+    // Content area (simple, scrollable)
+    const contentArea = document.createElement('div');
+    contentArea.className = 'mm-content';
+    contentArea.style.height = '420px';
+    contentArea.style.overflowY = 'auto';
+    contentArea.style.overflowX = 'hidden';
+    contentArea.style.padding = '8px';
+    contentArea.style.boxSizing = 'border-box';
+    contentArea.style.width = '100%';
+    contentArea.style.maxWidth = '100%';
+
     wrapper.appendChild(nav);
-    wrapper.appendChild(contentHost);
+    wrapper.appendChild(contentArea);
 
     const renderMissing = () => {
-      const node = renderMissingMonsters();
-      replaceContent(contentArea, node);
+      replaceContent(contentArea, renderMissingMonsters());
       setActive(missingBtn, true);
       setActive(notMaxBtn, false);
     };
     const renderNotMax = () => {
-      const node = renderNotMaxTier();
-      replaceContent(contentArea, node);
+      replaceContent(contentArea, renderNotMaxTier());
       setActive(missingBtn, false);
       setActive(notMaxBtn, true);
     };
 
     missingBtn.addEventListener('click', renderMissing);
     notMaxBtn.addEventListener('click', renderNotMax);
-
     renderMissing();
+
     return wrapper;
   }
 
-  function createNavButton(label, active = false) {
+  function createNavButton(label, active) {
     const btn = document.createElement('button');
     btn.textContent = label;
     btn.className = 'pixel-font-16';
@@ -87,33 +98,21 @@
       border: 4px solid transparent;
       border-image: url('https://bestiaryarena.com/_next/static/media/4-frame.a58d0c39.png') 4 fill stretch;
     `;
-    if (active) btn.style.borderImage = "url('https://bestiaryarena.com/_next/static/media/1-frame-pressed.e3fabbc5.png') 4 fill stretch";
     btn._setActive = (val) => {
       btn.style.borderImage = val
         ? "url('https://bestiaryarena.com/_next/static/media/1-frame-pressed.e3fabbc5.png') 4 fill stretch"
         : "url('https://bestiaryarena.com/_next/static/media/4-frame.a58d0c39.png') 4 fill stretch";
     };
+    btn._setActive(!!active);
     return btn;
   }
-
   function setActive(btn, val) { if (btn && btn._setActive) btn._setActive(val); }
-
-  function replaceContent(scroll, node) {
-    if (scroll.clearContent) scroll.clearContent();
-    const host = scroll.element || scroll;
-    while (host.firstChild) host.removeChild(host.firstChild);
-    if (scroll.addContent) {
-      scroll.addContent(node);
-    } else {
-      host.appendChild(node);
-    }
-  }
+  function replaceContent(host, node) { while (host.firstChild) host.removeChild(host.firstChild); host.appendChild(node); }
 
   function getOwnedBySpecies() {
     try {
-      const snap = globalThis.state?.player?.getSnapshot?.();
-      const ctx = snap?.context;
-      const monsters = Array.isArray(ctx?.monsters) ? ctx.monsters : [];
+      const playerCtx = globalThis.state?.player?.getSnapshot()?.context;
+      const monsters = Array.isArray(playerCtx?.monsters) ? playerCtx.monsters : [];
       const map = new Map(); // gameId -> { maxTier, count }
       for (const m of monsters) {
         if (!m || typeof m.gameId !== 'number') continue;
@@ -130,10 +129,11 @@
 
   function renderMissingMonsters() {
     const container = document.createElement('div');
-    const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(1, 1fr)';
-    grid.style.gap = '10px';
+    const listEl = document.createElement('div');
+    listEl.style.display = 'block';
+    listEl.style.width = '100%';
+    listEl.style.maxWidth = '100%';
+    listEl.style.boxSizing = 'border-box';
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -141,16 +141,17 @@
     let entries = [];
     for (const name of cache.wikiNames || []) {
       if (!name) continue;
-      const id = cache.nameToId?.get(name.toLowerCase()) ?? null;
+      const id = findIdForName(name);
       const isOwned = typeof id === 'number' ? ownedIds.has(id) : false;
       if (!isOwned) entries.push({ name, id });
     }
-    // Fallback: if wiki or mapping is empty, enumerate known IDs via utils
+
+    // Extra fallback derived from utils if wiki mapping produced nothing
     if (entries.length === 0 && globalThis.state?.utils?.getMonster) {
       const utils = globalThis.state.utils;
       const candidates = [];
       let misses = 0;
-      for (let i = 1; i <= 1200 && misses < 20; i++) {
+      for (let i = 1; i <= 1000 && misses < 30; i++) {
         try {
           const d = utils.getMonster(i);
           const nm = d?.metadata?.name;
@@ -168,29 +169,45 @@
     header.textContent = `Missing monsters: ${entries.length}`;
     container.appendChild(header);
 
-    for (const m of entries) {
-      const card = renderMonsterCard(m.id, m.name, cache.locationMap?.get(m.name.toLowerCase()) || null, null);
-      grid.appendChild(card);
+    if (entries.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'pixel-font-14';
+      empty.textContent = 'No missing creatures found.';
+      container.appendChild(empty);
+    } else {
+      for (const m of entries) {
+        const card = renderMonsterCard(m.id, m.name, getLocationForName(m.name), null);
+        try {
+          card.style.setProperty('width', '100%', 'important');
+          card.style.setProperty('max-width', '100%', 'important');
+          card.style.setProperty('flex', '0 0 100%', 'important');
+          card.style.margin = '0 0 8px 0';
+          card.style.display = 'block';
+          card.style.setProperty('min-width', '0', 'important');
+          card.style.setProperty('overflow', 'hidden', 'important');
+        } catch (e) {}
+        listEl.appendChild(card);
+      }
     }
-    container.appendChild(grid);
+    container.appendChild(listEl);
     return container;
   }
 
   function renderNotMaxTier() {
     const container = document.createElement('div');
-    const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(1, 1fr)';
-    grid.style.gap = '10px';
+    const listEl = document.createElement('div');
+    listEl.style.display = 'block';
+    listEl.style.width = '100%';
+    listEl.style.maxWidth = '100%';
+    listEl.style.boxSizing = 'border-box';
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
     for (const [gameId, info] of ownedSpecies.entries()) {
       if ((info.maxTier || 0) < 4) {
-        let name = null;
-        try { name = globalThis.state?.utils?.getMonster?.(gameId)?.metadata?.name || null; } catch (e) {}
+        const name = findNameForId(gameId);
         if (!name) continue; // Do not show ID-only entries
-        const loc = cache.locationMap?.get(name.toLowerCase()) || null;
+        const loc = cache.locationMap?.get(normalizeNameKey(name)) || null;
         list.push({ id: gameId, name, tier: info.maxTier || 0, location: loc });
       }
     }
@@ -203,40 +220,78 @@
     header.textContent = `Owned but not max tier (4): ${list.length}`;
     container.appendChild(header);
 
-    for (const m of list) {
-      const card = renderMonsterCard(m.id, m.name, m.location, m.tier);
-      grid.appendChild(card);
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'pixel-font-14';
+      empty.textContent = 'All owned creatures are at max tier (4).';
+      container.appendChild(empty);
+    } else {
+      for (const m of list) {
+        const card = renderMonsterCard(m.id, m.name, m.location, m.tier);
+        try {
+          card.style.setProperty('width', '100%', 'important');
+          card.style.setProperty('max-width', '100%', 'important');
+          card.style.setProperty('flex', '0 0 100%', 'important');
+          card.style.margin = '0 0 8px 0';
+          card.style.display = 'block';
+          card.style.setProperty('min-width', '0', 'important');
+          card.style.setProperty('overflow', 'hidden', 'important');
+        } catch (e) {}
+        listEl.appendChild(card);
+      }
     }
-    container.appendChild(grid);
+    container.appendChild(listEl);
     return container;
   }
 
   function renderMonsterCard(gameId, name, location, tierOrNull) {
     const card = document.createElement('div');
+    card.className = 'mm-card';
     card.style.display = 'flex';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'center';
     card.style.justifyContent = 'flex-start';
-    card.style.padding = '4px 0';
+    card.style.padding = '4px 4px';
+    card.style.width = '100%';
+    card.style.maxWidth = '100%';
+    card.style.boxSizing = 'border-box';
+    card.style.minHeight = '64px';
 
     let figure = null;
     if (typeof gameId === 'number' && api?.ui?.components?.createMonsterPortrait) {
       try { figure = api.ui.components.createMonsterPortrait({ monsterId: gameId, level: 1, tier: 1 }); } catch (e) {}
     }
     if (!figure) {
-      // Fall back to name-only, never show ID if name is missing
-      if (!name) return card;
+      if (!name) return card; // never show ID without a name
       const label = document.createElement('div');
       label.textContent = name;
+      label.style.textAlign = 'center';
+      label.style.wordBreak = 'break-word';
+      label.style.whiteSpace = 'normal';
+      label.style.maxWidth = '100%';
       card.appendChild(label);
     } else {
-      card.appendChild(figure);
+      const wrap = document.createElement('div');
+      wrap.className = 'mm-portrait';
+      wrap.style.width = '100%';
+      wrap.style.height = '42px';
+      wrap.style.display = 'flex';
+      wrap.style.justifyContent = 'center';
+      wrap.style.alignItems = 'flex-start';
+      wrap.style.overflow = 'hidden';
+      try { figure.style.maxWidth = '100%'; } catch (e) {}
+      wrap.appendChild(figure);
+      card.appendChild(wrap);
     }
 
     if (name) {
       const nameEl = document.createElement('div');
       nameEl.className = 'pixel-font-14';
       nameEl.style.marginTop = '4px';
+      nameEl.style.textAlign = 'center';
+      nameEl.style.wordBreak = 'break-word';
+      nameEl.style.whiteSpace = 'normal';
+      nameEl.style.maxWidth = '100%';
       nameEl.textContent = name;
       card.appendChild(nameEl);
     }
@@ -246,28 +301,64 @@
     meta.style.marginTop = '2px';
     meta.style.opacity = '0.9';
     meta.style.textAlign = 'center';
+    meta.style.wordBreak = 'break-word';
+    meta.style.overflowWrap = 'anywhere';
+    meta.style.whiteSpace = 'normal';
+    meta.style.maxWidth = '100%';
     const bits = [];
     if (typeof tierOrNull === 'number') bits.push(`Tier ${tierOrNull}/4`);
     if (location) bits.push(`Locations: ${location}`);
-    if (bits.length) {
-      meta.textContent = bits.join(' · ');
-      card.appendChild(meta);
-    }
+    if (bits.length) { meta.textContent = bits.join(' · '); card.appendChild(meta); }
 
     return card;
   }
 
+  function ensureStyles() {
+    if (document.getElementById('mm-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'mm-styles';
+    style.textContent = `
+      .mm-wrapper{max-width:100% !important;width:100% !important;overflow:hidden !important;column-count:1 !important;column-width:auto !important;isolation:isolate !important;contain:layout style !important}
+      .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;column-count:1 !important;column-width:auto !important}
+      .mm-grid{display:block !important;grid-template-columns:none !important;column-count:1 !important;gap:0 !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important}
+      .mm-grid > *{width:100% !important;max-width:100% !important;display:block !important;grid-column:1/-1 !important;float:none !important;clear:both !important}
+      .mm-card{width:100% !important;max-width:100% !important;box-sizing:border-box !important;display:block !important}
+      .mm-card img{max-width:100% !important;height:auto !important;}
+      .mm-portrait{max-width:100% !important;overflow:hidden !important}
+    `;
+    document.head.appendChild(style);
+  }
+
   async function ensureDataLoaded() {
     if (cache.fetching) {
-      return new Promise(resolve => {
-        const t = setInterval(() => { if (!cache.fetching) { clearInterval(t); resolve(); } }, 100);
-      });
+      return new Promise(resolve => { const t = setInterval(() => { if (!cache.fetching) { clearInterval(t); resolve(); } }, 100); });
     }
     cache.fetching = true;
     try {
-      if (!cache.wikiNames) cache.wikiNames = await fetchMonsterNamesFromWiki();
-      if (!cache.nameToId) cache.nameToId = buildNameToIdIndex();
-      if (!cache.locationMap) cache.locationMap = await fetchCreatureFarmingLocations();
+      if (!cache.wikiNames || !Array.isArray(cache.wikiNames) || cache.wikiNames.length === 0) {
+        let names = await fetchMonsterNamesFromWiki();
+        if (!names || names.length === 0) {
+          names = [];
+          const utils = globalThis.state?.utils;
+          if (utils && typeof utils.getMonster === 'function') {
+            let misses = 0;
+            for (let i = 1; i <= 2000 && misses < 30; i++) {
+              try {
+                const d = utils.getMonster(i);
+                const nm = d?.metadata?.name;
+                if (nm) { names.push(nm); misses = 0; } else { misses++; }
+              } catch (e) { misses++; }
+            }
+          }
+        }
+        cache.wikiNames = Array.from(new Set((names || []).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b)));
+      }
+      if (!cache.nameToId || !(cache.nameToId instanceof Map) || cache.nameToId.size === 0) {
+        cache.nameToId = buildNameToIdIndex();
+      }
+      if (!cache.locationMap || !(cache.locationMap instanceof Map)) {
+        cache.locationMap = await fetchCreatureFarmingLocations();
+      }
     } finally {
       cache.fetching = false;
     }
@@ -278,20 +369,18 @@
     const map = new Map();
     if (!utils || typeof utils.getMonster !== 'function') return map;
     let consecutiveFailures = 0;
-    const maxConsecutiveFailures = 10;
-    for (let id = 1; id <= 2000; id++) {
+    const maxConsecutiveFailures = 15;
+    for (let id = 1; id <= 3000; id++) {
       try {
         const data = utils.getMonster(id);
         const nm = data?.metadata?.name;
         if (nm) {
-          map.set(String(nm).toLowerCase(), id);
+          map.set(normalizeNameKey(nm), id);
           consecutiveFailures = 0;
         } else {
           consecutiveFailures++;
         }
-      } catch (e) {
-        consecutiveFailures++;
-      }
+      } catch (e) { consecutiveFailures++; }
       if (consecutiveFailures >= maxConsecutiveFailures) break;
     }
     return map;
@@ -311,7 +400,7 @@
           names.forEach(n => all.add(n));
         }
         if (all.size) return Array.from(all);
-      } catch (e) { /* try next base */ }
+      } catch (e) { /* try next */ }
     }
     return [];
   }
@@ -353,7 +442,7 @@
       'https://bestiaryarena.wiki.gg/api.php',
       'https://bestiaryarena.fandom.com/api.php'
     ];
-    const pages = ['Creature_farming', 'Creature farming', 'Creature_Farming'];
+    const pages = ['Creature_farming', 'Creature farming', 'Creature_Farming', 'Creature-Farming'];
     for (const base of bases) {
       for (const page of pages) {
         try {
@@ -376,30 +465,70 @@
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const map = new Map();
+      const out = new Map();
 
       const tables = Array.from(doc.querySelectorAll('table'));
       for (const table of tables) {
         const headerRow = table.querySelector('tr');
         if (!headerRow) continue;
-        const headers = Array.from(headerRow.querySelectorAll('th')).map(h => h.textContent.trim().toLowerCase());
-        const creatureIdx = headers.findIndex(h => /creature|monster/i.test(h));
-        const locationIdx = headers.findIndex(h => /location|where/i.test(h));
+        const headers = Array.from(headerRow.querySelectorAll('th')).map(h => (h.textContent || '').trim().toLowerCase());
+        const creatureIdx = headers.findIndex(h => /creature|monster|name/i.test(h));
+        const locationIdx = headers.findIndex(h => /location|where|farm/i.test(h));
         if (creatureIdx === -1 || locationIdx === -1) continue;
 
         const rows = Array.from(table.querySelectorAll('tr')).slice(1);
         for (const tr of rows) {
           const tds = Array.from(tr.querySelectorAll('td'));
           if (tds.length <= Math.max(creatureIdx, locationIdx)) continue;
-          const name = (tds[creatureIdx].textContent || '').trim();
-          const loc = (tds[locationIdx].textContent || '').replace(/\s+/g, ' ').trim();
-          if (name) map.set(name.toLowerCase(), loc || null);
+          const rawName = (tds[creatureIdx].textContent || '').replace(/\s+/g, ' ').trim();
+          const rawLoc = (tds[locationIdx].textContent || '').replace(/\s+/g, ' ').trim();
+          if (rawName) out.set(normalizeNameKey(rawName), rawLoc || null);
         }
       }
-      return map;
+      return out;
     } catch (e) {
       return new Map();
     }
+  }
+
+  function normalizeNameKey(n) {
+    return String(n || '')
+      .toLowerCase()
+      .replace(/\s*\(.+?\)\s*/g, '')
+      .replace(/[,·].*$/, '')
+      .replace(/[\-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function getLocationForName(name) {
+    if (!name) return null;
+    const direct = cache.locationMap?.get(normalizeNameKey(name)) || null;
+    return direct || null;
+  }
+
+  function findIdForName(name) {
+    if (!name) return null;
+    const key = normalizeNameKey(name);
+    const id = cache.nameToId?.get(key);
+    return typeof id === 'number' ? id : null;
+  }
+
+  function findNameForId(gameId) {
+    if (!cache.nameToId || cache.nameToId.size === 0) return null;
+    for (const [k, id] of cache.nameToId.entries()) {
+      if (id === gameId) return k; // normalized lowercased; acceptable for display
+    }
+    try { return globalThis.state?.utils?.getMonster?.(gameId)?.metadata?.name || null; } catch (e) { return null; }
+  }
+
+  async function waitForUtils(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+      if (globalThis.state?.utils?.getMonster) return true;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
   }
 })();
 
