@@ -129,18 +129,11 @@
 
   function renderMissingMonsters() {
     const container = document.createElement('div');
-    const grid = document.createElement('div');
-    grid.className = 'mm-grid';
-    try {
-      grid.style.setProperty('display', 'block', 'important');
-      grid.style.setProperty('grid-template-columns', 'none', 'important');
-      grid.style.setProperty('column-count', '1', 'important');
-      grid.style.setProperty('width', '100%', 'important');
-      grid.style.setProperty('max-width', '100%', 'important');
-      grid.style.setProperty('gap', '8px', 'important');
-      grid.style.setProperty('min-width', '0', 'important');
-      grid.style.setProperty('overflow', 'hidden', 'important');
-    } catch (e) {}
+    const listEl = document.createElement('div');
+    listEl.style.display = 'block';
+    listEl.style.width = '100%';
+    listEl.style.maxWidth = '100%';
+    listEl.style.boxSizing = 'border-box';
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -188,35 +181,25 @@
           card.style.setProperty('width', '100%', 'important');
           card.style.setProperty('max-width', '100%', 'important');
           card.style.setProperty('flex', '0 0 100%', 'important');
-          card.style.marginBottom = '8px';
+          card.style.margin = '0 0 8px 0';
           card.style.display = 'block';
-          card.style.setProperty('grid-column', '1 / -1', 'important');
-          card.style.setProperty('float', 'none', 'important');
-          card.style.setProperty('clear', 'both', 'important');
           card.style.setProperty('min-width', '0', 'important');
           card.style.setProperty('overflow', 'hidden', 'important');
         } catch (e) {}
-        grid.appendChild(card);
+        listEl.appendChild(card);
       }
     }
-    container.appendChild(grid);
+    container.appendChild(listEl);
     return container;
   }
 
   function renderNotMaxTier() {
     const container = document.createElement('div');
-    const grid = document.createElement('div');
-    grid.className = 'mm-grid';
-    try {
-      grid.style.setProperty('display', 'block', 'important');
-      grid.style.setProperty('grid-template-columns', 'none', 'important');
-      grid.style.setProperty('column-count', '1', 'important');
-      grid.style.setProperty('width', '100%', 'important');
-      grid.style.setProperty('max-width', '100%', 'important');
-      grid.style.setProperty('gap', '8px', 'important');
-      grid.style.setProperty('min-width', '0', 'important');
-      grid.style.setProperty('overflow', 'hidden', 'important');
-    } catch (e) {}
+    const listEl = document.createElement('div');
+    listEl.style.display = 'block';
+    listEl.style.width = '100%';
+    listEl.style.maxWidth = '100%';
+    listEl.style.boxSizing = 'border-box';
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -249,18 +232,15 @@
           card.style.setProperty('width', '100%', 'important');
           card.style.setProperty('max-width', '100%', 'important');
           card.style.setProperty('flex', '0 0 100%', 'important');
-          card.style.marginBottom = '8px';
+          card.style.margin = '0 0 8px 0';
           card.style.display = 'block';
-          card.style.setProperty('grid-column', '1 / -1', 'important');
-          card.style.setProperty('float', 'none', 'important');
-          card.style.setProperty('clear', 'both', 'important');
           card.style.setProperty('min-width', '0', 'important');
           card.style.setProperty('overflow', 'hidden', 'important');
         } catch (e) {}
-        grid.appendChild(card);
+        listEl.appendChild(card);
       }
     }
-    container.appendChild(grid);
+    container.appendChild(listEl);
     return container;
   }
 
