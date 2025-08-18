@@ -127,7 +127,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
+    grid.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
     grid.style.gap = '8px';
     grid.style.width = '100%';
     grid.style.boxSizing = 'border-box';
@@ -180,7 +180,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
+    grid.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
     grid.style.gap = '8px';
     grid.style.width = '100%';
     grid.style.boxSizing = 'border-box';
