@@ -255,6 +255,7 @@
     card.style.width = '100%';
     card.style.maxWidth = '100%';
     card.style.boxSizing = 'border-box';
+    card.style.minHeight = '64px';
 
     let figure = null;
     if (typeof gameId === 'number' && api?.ui?.components?.createMonsterPortrait) {
@@ -273,11 +274,12 @@
       const wrap = document.createElement('div');
       wrap.className = 'mm-portrait';
       wrap.style.width = '100%';
+      wrap.style.height = '42px';
       wrap.style.display = 'flex';
       wrap.style.justifyContent = 'center';
       wrap.style.alignItems = 'flex-start';
       wrap.style.overflow = 'hidden';
-      try { figure.style.maxWidth = '100%'; figure.style.width = '100%'; } catch (e) {}
+      try { figure.style.maxWidth = '100%'; } catch (e) {}
       wrap.appendChild(figure);
       card.appendChild(wrap);
     }
