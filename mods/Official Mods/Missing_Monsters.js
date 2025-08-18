@@ -31,6 +31,7 @@
     await ensureDataLoaded();
 
     const wrapper = document.createElement('div');
+    wrapper.className = 'mm-wrapper';
     wrapper.style.minWidth = '520px';
     wrapper.style.maxWidth = '100%';
     wrapper.style.width = '100%';
@@ -129,6 +130,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
+    try { grid.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important'); } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -176,6 +178,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
+    try { grid.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important'); } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -231,6 +234,7 @@
       card.appendChild(label);
     } else {
       const wrap = document.createElement('div');
+      wrap.className = 'mm-portrait';
       wrap.style.width = '100%';
       wrap.style.display = 'flex';
       wrap.style.justifyContent = 'center';
@@ -275,10 +279,12 @@
     const style = document.createElement('style');
     style.id = 'mm-styles';
     style.textContent = `
+      .mm-wrapper{max-width:100%;width:100%;overflow:hidden}
       .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;}
-      .mm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:8px;width:100%;box-sizing:border-box;justify-items:center;align-items:start}
-      .mm-card{width:100%;max-width:100%;box-sizing:border-box}
-      .mm-card img{max-width:100%;height:auto;}
+      .mm-grid{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:8px !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important;justify-items:center !important;align-items:start !important}
+      .mm-card{width:100% !important;max-width:100% !important;box-sizing:border-box !important}
+      .mm-card img{max-width:100% !important;height:auto !important;}
+      .mm-portrait{max-width:100% !important;overflow:hidden !important}
     `;
     document.head.appendChild(style);
   }
