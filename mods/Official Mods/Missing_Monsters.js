@@ -38,6 +38,7 @@
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
     wrapper.style.overflowX = 'hidden';
+    try { wrapper.style.setProperty('grid-column', '1 / -1', 'important'); } catch (e) {}
 
     // Nav
     const nav = document.createElement('div');
@@ -131,9 +132,11 @@
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
     try {
-      grid.style.setProperty('display', 'block', 'important');
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', '1fr', 'important');
       grid.style.setProperty('width', '100%', 'important');
       grid.style.setProperty('max-width', '100%', 'important');
+      grid.style.setProperty('gap', '8px', 'important');
     } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
@@ -178,6 +181,7 @@
         card.style.setProperty('flex', '0 0 100%', 'important');
         card.style.marginBottom = '8px';
         card.style.display = 'block';
+        card.style.setProperty('grid-column', '1 / -1', 'important');
       } catch (e) {}
       grid.appendChild(card);
     }
@@ -190,9 +194,11 @@
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
     try {
-      grid.style.setProperty('display', 'block', 'important');
+      grid.style.setProperty('display', 'grid', 'important');
+      grid.style.setProperty('grid-template-columns', '1fr', 'important');
       grid.style.setProperty('width', '100%', 'important');
       grid.style.setProperty('max-width', '100%', 'important');
+      grid.style.setProperty('gap', '8px', 'important');
     } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
@@ -222,6 +228,7 @@
         card.style.setProperty('flex', '0 0 100%', 'important');
         card.style.marginBottom = '8px';
         card.style.display = 'block';
+        card.style.setProperty('grid-column', '1 / -1', 'important');
       } catch (e) {}
       grid.appendChild(card);
     }
@@ -303,8 +310,8 @@
     style.textContent = `
       .mm-wrapper{max-width:100%;width:100%;overflow:hidden}
       .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;}
-      .mm-grid{display:block !important;grid-template-columns:none !important;column-count:1 !important;gap:0 !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important}
-      .mm-grid > *{width:100% !important;max-width:100% !important;display:block !important}
+      .mm-grid{display:grid !important;grid-template-columns:1fr !important;gap:8px !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important}
+      .mm-grid > *{width:100% !important;max-width:100% !important;display:block !important;grid-column:1/-1 !important}
       .mm-card{width:100% !important;max-width:100% !important;box-sizing:border-box !important;display:block !important}
       .mm-card img{max-width:100% !important;height:auto !important;}
       .mm-portrait{max-width:100% !important;overflow:hidden !important}
