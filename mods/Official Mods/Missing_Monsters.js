@@ -132,11 +132,14 @@
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
     try {
-      grid.style.setProperty('display', 'grid', 'important');
-      grid.style.setProperty('grid-template-columns', '1fr', 'important');
+      grid.style.setProperty('display', 'block', 'important');
+      grid.style.setProperty('grid-template-columns', 'none', 'important');
+      grid.style.setProperty('column-count', '1', 'important');
       grid.style.setProperty('width', '100%', 'important');
       grid.style.setProperty('max-width', '100%', 'important');
       grid.style.setProperty('gap', '8px', 'important');
+      grid.style.setProperty('min-width', '0', 'important');
+      grid.style.setProperty('overflow', 'hidden', 'important');
     } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
@@ -182,6 +185,10 @@
         card.style.marginBottom = '8px';
         card.style.display = 'block';
         card.style.setProperty('grid-column', '1 / -1', 'important');
+        card.style.setProperty('float', 'none', 'important');
+        card.style.setProperty('clear', 'both', 'important');
+        card.style.setProperty('min-width', '0', 'important');
+        card.style.setProperty('overflow', 'hidden', 'important');
       } catch (e) {}
       grid.appendChild(card);
     }
@@ -194,11 +201,14 @@
     const grid = document.createElement('div');
     grid.className = 'mm-grid';
     try {
-      grid.style.setProperty('display', 'grid', 'important');
-      grid.style.setProperty('grid-template-columns', '1fr', 'important');
+      grid.style.setProperty('display', 'block', 'important');
+      grid.style.setProperty('grid-template-columns', 'none', 'important');
+      grid.style.setProperty('column-count', '1', 'important');
       grid.style.setProperty('width', '100%', 'important');
       grid.style.setProperty('max-width', '100%', 'important');
       grid.style.setProperty('gap', '8px', 'important');
+      grid.style.setProperty('min-width', '0', 'important');
+      grid.style.setProperty('overflow', 'hidden', 'important');
     } catch (e) {}
 
     const ownedSpecies = getOwnedBySpecies();
@@ -229,6 +239,10 @@
         card.style.marginBottom = '8px';
         card.style.display = 'block';
         card.style.setProperty('grid-column', '1 / -1', 'important');
+        card.style.setProperty('float', 'none', 'important');
+        card.style.setProperty('clear', 'both', 'important');
+        card.style.setProperty('min-width', '0', 'important');
+        card.style.setProperty('overflow', 'hidden', 'important');
       } catch (e) {}
       grid.appendChild(card);
     }
@@ -308,10 +322,10 @@
     const style = document.createElement('style');
     style.id = 'mm-styles';
     style.textContent = `
-      .mm-wrapper{max-width:100%;width:100%;overflow:hidden}
-      .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;}
-      .mm-grid{display:grid !important;grid-template-columns:1fr !important;gap:8px !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important}
-      .mm-grid > *{width:100% !important;max-width:100% !important;display:block !important;grid-column:1/-1 !important}
+      .mm-wrapper{max-width:100% !important;width:100% !important;overflow:hidden !important;column-count:1 !important;column-width:auto !important;isolation:isolate !important;contain:layout style !important}
+      .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;column-count:1 !important;column-width:auto !important}
+      .mm-grid{display:block !important;grid-template-columns:none !important;column-count:1 !important;gap:0 !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important}
+      .mm-grid > *{width:100% !important;max-width:100% !important;display:block !important;grid-column:1/-1 !important;float:none !important;clear:both !important}
       .mm-card{width:100% !important;max-width:100% !important;box-sizing:border-box !important;display:block !important}
       .mm-card img{max-width:100% !important;height:auto !important;}
       .mm-portrait{max-width:100% !important;overflow:hidden !important}
