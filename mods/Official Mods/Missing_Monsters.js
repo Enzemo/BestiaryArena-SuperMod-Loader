@@ -176,21 +176,28 @@
     header.textContent = `Missing monsters: ${entries.length}`;
     container.appendChild(header);
 
-    for (const m of entries) {
-      const card = renderMonsterCard(m.id, m.name, getLocationForName(m.name), null);
-      try {
-        card.style.setProperty('width', '100%', 'important');
-        card.style.setProperty('max-width', '100%', 'important');
-        card.style.setProperty('flex', '0 0 100%', 'important');
-        card.style.marginBottom = '8px';
-        card.style.display = 'block';
-        card.style.setProperty('grid-column', '1 / -1', 'important');
-        card.style.setProperty('float', 'none', 'important');
-        card.style.setProperty('clear', 'both', 'important');
-        card.style.setProperty('min-width', '0', 'important');
-        card.style.setProperty('overflow', 'hidden', 'important');
-      } catch (e) {}
-      grid.appendChild(card);
+    if (entries.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'pixel-font-14';
+      empty.textContent = 'No missing creatures found.';
+      container.appendChild(empty);
+    } else {
+      for (const m of entries) {
+        const card = renderMonsterCard(m.id, m.name, getLocationForName(m.name), null);
+        try {
+          card.style.setProperty('width', '100%', 'important');
+          card.style.setProperty('max-width', '100%', 'important');
+          card.style.setProperty('flex', '0 0 100%', 'important');
+          card.style.marginBottom = '8px';
+          card.style.display = 'block';
+          card.style.setProperty('grid-column', '1 / -1', 'important');
+          card.style.setProperty('float', 'none', 'important');
+          card.style.setProperty('clear', 'both', 'important');
+          card.style.setProperty('min-width', '0', 'important');
+          card.style.setProperty('overflow', 'hidden', 'important');
+        } catch (e) {}
+        grid.appendChild(card);
+      }
     }
     container.appendChild(grid);
     return container;
@@ -230,21 +237,28 @@
     header.textContent = `Owned but not max tier (4): ${list.length}`;
     container.appendChild(header);
 
-    for (const m of list) {
-      const card = renderMonsterCard(m.id, m.name, m.location, m.tier);
-      try {
-        card.style.setProperty('width', '100%', 'important');
-        card.style.setProperty('max-width', '100%', 'important');
-        card.style.setProperty('flex', '0 0 100%', 'important');
-        card.style.marginBottom = '8px';
-        card.style.display = 'block';
-        card.style.setProperty('grid-column', '1 / -1', 'important');
-        card.style.setProperty('float', 'none', 'important');
-        card.style.setProperty('clear', 'both', 'important');
-        card.style.setProperty('min-width', '0', 'important');
-        card.style.setProperty('overflow', 'hidden', 'important');
-      } catch (e) {}
-      grid.appendChild(card);
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'pixel-font-14';
+      empty.textContent = 'All owned creatures are at max tier (4).';
+      container.appendChild(empty);
+    } else {
+      for (const m of list) {
+        const card = renderMonsterCard(m.id, m.name, m.location, m.tier);
+        try {
+          card.style.setProperty('width', '100%', 'important');
+          card.style.setProperty('max-width', '100%', 'important');
+          card.style.setProperty('flex', '0 0 100%', 'important');
+          card.style.marginBottom = '8px';
+          card.style.display = 'block';
+          card.style.setProperty('grid-column', '1 / -1', 'important');
+          card.style.setProperty('float', 'none', 'important');
+          card.style.setProperty('clear', 'both', 'important');
+          card.style.setProperty('min-width', '0', 'important');
+          card.style.setProperty('overflow', 'hidden', 'important');
+        } catch (e) {}
+        grid.appendChild(card);
+      }
     }
     container.appendChild(grid);
     return container;
