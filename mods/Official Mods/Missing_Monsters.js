@@ -515,7 +515,7 @@
   }
 
   function findNameForId(gameId) {
-    if (!cache.nameToId || cache.nmaeToId.size === 0) return null;
+    if (!cache.nameToId || cache.nameToId.size === 0) return null;
     for (const [k, id] of cache.nameToId.entries()) {
       if (id === gameId) return k; // normalized lowercased; acceptable for display
     }
