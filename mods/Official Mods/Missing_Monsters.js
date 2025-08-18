@@ -279,8 +279,8 @@
     style.textContent = `
       .mm-wrapper{max-width:100%;width:100%;overflow:hidden}
       .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;}
-      .mm-grid{display:flex !important;flex-wrap:wrap !important;gap:8px !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important;justify-content:space-between !important;align-items:flex-start !important}
-      .mm-card{width:calc(50% - 4px) !important;max-width:calc(50% - 4px) !important;box-sizing:border-box !important}
+      .mm-grid{display:flex !important;flex-wrap:wrap !important;gap:8px !important;width:100% !important;max-width:100% !important;box-sizing:border-box !important;justify-content:flex-start !important;align-items:flex-start !important}
+      .mm-card{width:100% !important;max-width:100% !important;box-sizing:border-box !important}
       .mm-card img{max-width:100% !important;height:auto !important;}
       .mm-portrait{max-width:100% !important;overflow:hidden !important}
     `;
