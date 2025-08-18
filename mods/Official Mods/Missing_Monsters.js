@@ -111,8 +111,7 @@
 
   function getOwnedBySpecies() {
     try {
-      const playerCtx = globalThis.state?.player?.getSnapshot()?.context;
-      const monsters = Array.isArray(playerCtx?.monsters) ? playerCtx.monsters : [];
+      const monsters = safeGetMonsters();
       const map = new Map(); // gameId -> { maxTier, count }
       for (const m of monsters) {
         if (!m || typeof m.gameId !== 'number') continue;
@@ -134,6 +133,8 @@
     listEl.style.width = '100%';
     listEl.style.maxWidth = '100%';
     listEl.style.boxSizing = 'border-box';
+    listEl.style.padding = '0';
+    listEl.style.margin = '0';
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -200,6 +201,8 @@
     listEl.style.width = '100%';
     listEl.style.maxWidth = '100%';
     listEl.style.boxSizing = 'border-box';
+    listEl.style.padding = '0';
+    listEl.style.margin = '0';
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -249,7 +252,7 @@
     card.className = 'mm-card';
     card.style.display = 'flex';
     card.style.flexDirection = 'column';
-    card.style.alignItems = 'center';
+    card.style.alignItems = 'flex-start';
     card.style.justifyContent = 'flex-start';
     card.style.padding = '4px 4px';
     card.style.width = '100%';
@@ -265,7 +268,7 @@
       if (!name) return card; // never show ID without a name
       const label = document.createElement('div');
       label.textContent = name;
-      label.style.textAlign = 'center';
+      label.style.textAlign = 'left';
       label.style.wordBreak = 'break-word';
       label.style.whiteSpace = 'normal';
       label.style.maxWidth = '100%';
@@ -276,7 +279,7 @@
       wrap.style.width = '100%';
       wrap.style.height = '42px';
       wrap.style.display = 'flex';
-      wrap.style.justifyContent = 'center';
+      wrap.style.justifyContent = 'flex-start';
       wrap.style.alignItems = 'flex-start';
       wrap.style.overflow = 'hidden';
       try { figure.style.maxWidth = '100%'; } catch (e) {}
@@ -288,7 +291,7 @@
       const nameEl = document.createElement('div');
       nameEl.className = 'pixel-font-14';
       nameEl.style.marginTop = '4px';
-      nameEl.style.textAlign = 'center';
+      nameEl.style.textAlign = 'left';
       nameEl.style.wordBreak = 'break-word';
       nameEl.style.whiteSpace = 'normal';
       nameEl.style.maxWidth = '100%';
@@ -300,7 +303,7 @@
     meta.className = 'pixel-font-14';
     meta.style.marginTop = '2px';
     meta.style.opacity = '0.9';
-    meta.style.textAlign = 'center';
+    meta.style.textAlign = 'left';
     meta.style.wordBreak = 'break-word';
     meta.style.overflowWrap = 'anywhere';
     meta.style.whiteSpace = 'normal';
@@ -335,6 +338,7 @@
     }
     cache.fetching = true;
     try {
+      await waitForPlayer(1500);
       if (!cache.wikiNames || !Array.isArray(cache.wikiNames) || cache.wikiNames.length === 0) {
         let names = await fetchMonsterNamesFromWiki();
         if (!names || names.length === 0) {
@@ -362,6 +366,26 @@
     } finally {
       cache.fetching = false;
     }
+  }
+
+  function safeGetMonsters() {
+    try {
+      const ctx = globalThis.state?.player?.getSnapshot()?.context;
+      const monsters = ctx?.monsters;
+      return Array.isArray(monsters) ? monsters : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function waitForPlayer(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+      const mons = safeGetMonsters();
+      if (mons && mons.length >= 0) return true;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
   }
 
   function buildNameToIdIndex() {
