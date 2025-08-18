@@ -30,12 +30,16 @@
 
     const wrapper = document.createElement('div');
     wrapper.style.minWidth = '520px';
+    wrapper.style.maxWidth = '100%';
+    wrapper.style.overflowX = 'hidden';
 
     // Nav buttons
     const nav = document.createElement('div');
     nav.style.display = 'flex';
     nav.style.gap = '8px';
     nav.style.marginBottom = '8px';
+    nav.style.flexWrap = 'wrap';
+    nav.style.maxWidth = '100%';
 
     const missingBtn = createNavButton('Missing', true);
     const notMaxBtn = createNavButton('Not Max Tier');
@@ -45,7 +49,11 @@
 
     const contentArea = api.ui.components.createScrollContainer({ height: '60vh', padding: true });
     wrapper.appendChild(nav);
-    wrapper.appendChild(contentArea.element || contentArea);
+    const contentHost = contentArea.element || contentArea;
+    contentHost.style.maxWidth = '100%';
+    contentHost.style.overflowX = 'hidden';
+    contentHost.style.boxSizing = 'border-box';
+    wrapper.appendChild(contentHost);
 
     const renderMissing = () => {
       const node = renderMissingMonsters();
@@ -125,6 +133,8 @@
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
     grid.style.gap = '10px';
+    grid.style.width = '100%';
+    grid.style.boxSizing = 'border-box';
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -180,6 +190,8 @@
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
     grid.style.gap = '10px';
+    grid.style.width = '100%';
+    grid.style.boxSizing = 'border-box';
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -250,7 +262,19 @@
       label.textContent = name;
       card.appendChild(label);
     } else {
-      card.appendChild(figure);
+      const wrap = document.createElement('div');
+      wrap.style.width = '100%';
+      wrap.style.display = 'flex';
+      wrap.style.justifyContent = 'center';
+      wrap.style.alignItems = 'flex-start';
+      wrap.style.overflow = 'hidden';
+      try {
+        figure.style.transform = 'scale(0.9)';
+        figure.style.transformOrigin = 'top center';
+        figure.style.maxWidth = '100%';
+      } catch (e) {}
+      wrap.appendChild(figure);
+      card.appendChild(wrap);
     }
 
     if (name) {
@@ -286,14 +310,14 @@
     cache.fetching = true;
     try {
       if (!cache.wikiNames || !Array.isArray(cache.wikiNames) || cache.wikiNames.length === 0) {
-        cache.wikiNames = await fetchMonsterNamesFromWiki();
+        let names = await fetchMonsterNamesFromWiki();
         // Fallback if wiki empty: enumerate using utils
-        if (!cache.wikiNames || cache.wikiNames.length === 0) {
-          const names = [];
+        if (!names || names.length === 0) {
+          names = [];
           const utils = globalThis.state?.utils;
           if (utils && typeof utils.getMonster === 'function') {
             let misses = 0;
-            for (let i = 1; i <= 1500 && misses < 20; i++) {
+            for (let i = 1; i <= 2000 && misses < 30; i++) {
               try {
                 const d = utils.getMonster(i);
                 const nm = d?.metadata?.name;
@@ -301,8 +325,9 @@
               } catch (e) { misses++; }
             }
           }
-          cache.wikiNames = names;
         }
+        // Deduplicate and sort for stability
+        cache.wikiNames = Array.from(new Set(names.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b)));
       }
       if (!cache.nameToId || !(cache.nameToId instanceof Map) || cache.nameToId.size === 0) {
         cache.nameToId = buildNameToIdIndex();
