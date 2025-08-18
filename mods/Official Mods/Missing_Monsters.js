@@ -21,7 +21,7 @@
     primary: false,
     onClick: async () => {
       const container = await buildModal();
-      api.ui.components.createModal({ title: MODAL_TITLE, width: 900, height: 'auto', content: container });
+      api.ui.components.createModal({ title: MODAL_TITLE, width: 720, height: 'auto', content: container });
     }
   });
 
@@ -29,7 +29,7 @@
     await ensureDataLoaded();
 
     const wrapper = document.createElement('div');
-    wrapper.style.minWidth = '840px';
+    wrapper.style.minWidth = '640px';
 
     // Nav buttons
     const nav = document.createElement('div');
@@ -123,7 +123,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
     grid.style.gap = '10px';
 
     const ownedSpecies = getOwnedBySpecies();
@@ -132,7 +132,7 @@
     const entries = [];
     for (const name of cache.wikiNames || []) {
       if (!name) continue;
-      const id = cache.nameToId?.get(name.toLowerCase()) ?? null;
+      const id = cache.nameToId?.get(String(name).toLowerCase()) ?? null;
       const isOwned = typeof id === 'number' ? ownedIds.has(id) : false;
       if (!isOwned) entries.push({ name, id });
     }
@@ -146,18 +146,39 @@
     container.appendChild(header);
 
     for (const m of entries) {
-      const card = renderMonsterCard(m.id, m.name, cache.locationMap?.get(m.name.toLowerCase()) || null, null);
+      const card = renderMonsterCard(m.id, m.name, getLocationForName(m.name), null);
       grid.appendChild(card);
     }
     container.appendChild(grid);
     return container;
   }
 
+  function getLocationForName(name) {
+    if (!name) return null;
+    const key = String(name).toLowerCase();
+    // Direct lookup
+    let loc = cache.locationMap?.get(key) || null;
+    if (loc) return loc;
+    // Try removing parenthetical notes or commas
+    const simplified = key.replace(/\s*\(.+?\)\s*/g, '').replace(/,.+$/, '').trim();
+    if (simplified && simplified !== key) {
+      loc = cache.locationMap?.get(simplified) || null;
+      if (loc) return loc;
+    }
+    // Try hyphen/underscore/space normalization
+    const normalized = simplified.replace(/[\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (normalized) {
+      loc = cache.locationMap?.get(normalized) || null;
+      if (loc) return loc;
+    }
+    return null;
+  }
+
   function renderNotMaxTier() {
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    grid.style.gridTemplateColumns = 'repeat(3, 1fr)';
     grid.style.gap = '10px';
 
     const ownedSpecies = getOwnedBySpecies();
@@ -243,9 +264,15 @@
     }
     cache.fetching = true;
     try {
-      if (!cache.wikiNames) cache.wikiNames = await fetchMonsterNamesFromWiki();
-      if (!cache.nameToId) cache.nameToId = buildNameToIdIndex();
-      if (!cache.locationMap) cache.locationMap = await fetchCreatureFarmingLocations();
+      if (!cache.wikiNames || !Array.isArray(cache.wikiNames) || cache.wikiNames.length === 0) {
+        cache.wikiNames = await fetchMonsterNamesFromWiki();
+      }
+      if (!cache.nameToId || !(cache.nameToId instanceof Map) || cache.nameToId.size === 0) {
+        cache.nameToId = buildNameToIdIndex();
+      }
+      if (!cache.locationMap || !(cache.locationMap instanceof Map)) {
+        cache.locationMap = await fetchCreatureFarmingLocations();
+      }
     } finally {
       cache.fetching = false;
     }
@@ -256,8 +283,8 @@
     const map = new Map();
     if (!utils || typeof utils.getMonster !== 'function') return map;
     let consecutiveFailures = 0;
-    const maxConsecutiveFailures = 10;
-    for (let id = 1; id <= 2000; id++) {
+    const maxConsecutiveFailures = 15; // be a bit more lenient
+    for (let id = 1; id <= 3000; id++) {
       try {
         const data = utils.getMonster(id);
         const nm = data?.metadata?.name;
@@ -331,7 +358,7 @@
       'https://bestiaryarena.wiki.gg/api.php',
       'https://bestiaryarena.fandom.com/api.php'
     ];
-    const pages = ['Creature_farming', 'Creature farming', 'Creature_Farming'];
+    const pages = ['Creature_farming', 'Creature farming', 'Creature_Farming', 'Creature-Farming'];
     for (const base of bases) {
       for (const page of pages) {
         try {
@@ -361,15 +388,15 @@
         const headerRow = table.querySelector('tr');
         if (!headerRow) continue;
         const headers = Array.from(headerRow.querySelectorAll('th')).map(h => h.textContent.trim().toLowerCase());
-        const creatureIdx = headers.findIndex(h => /creature|monster/i.test(h));
-        const locationIdx = headers.findIndex(h => /location|where/i.test(h));
+        const creatureIdx = headers.findIndex(h => /creature|monster|name/i.test(h));
+        const locationIdx = headers.findIndex(h => /location|where|farm/i.test(h));
         if (creatureIdx === -1 || locationIdx === -1) continue;
 
         const rows = Array.from(table.querySelectorAll('tr')).slice(1);
         for (const tr of rows) {
           const tds = Array.from(tr.querySelectorAll('td'));
           if (tds.length <= Math.max(creatureIdx, locationIdx)) continue;
-          const name = (tds[creatureIdx].textContent || '').trim();
+          const name = (tds[creatureIdx].textContent || '').replace(/\s+/g,' ').trim();
           const loc = (tds[locationIdx].textContent || '').replace(/\s+/g, ' ').trim();
           if (name) map.set(name.toLowerCase(), loc || null);
         }
