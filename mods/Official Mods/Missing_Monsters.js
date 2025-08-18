@@ -32,6 +32,9 @@
     const wrapper = document.createElement('div');
     wrapper.style.minWidth = '520px';
     wrapper.style.maxWidth = '100%';
+    wrapper.style.width = '100%';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
     wrapper.style.overflowX = 'hidden';
 
     // Nav
@@ -41,6 +44,7 @@
     nav.style.marginBottom = '8px';
     nav.style.flexWrap = 'wrap';
     nav.style.maxWidth = '100%';
+    nav.style.width = '100%';
 
     const missingBtn = createNavButton('Missing', true);
     const notMaxBtn = createNavButton('Not Max Tier');
@@ -54,6 +58,8 @@
     contentArea.style.overflowX = 'hidden';
     contentArea.style.padding = '8px';
     contentArea.style.boxSizing = 'border-box';
+    contentArea.style.width = '100%';
+    contentArea.style.maxWidth = '100%';
 
     wrapper.appendChild(nav);
     wrapper.appendChild(contentArea);
@@ -122,9 +128,11 @@
     const grid = document.createElement('div');
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
-    grid.style.gap = '10px';
+    grid.style.gap = '8px';
     grid.style.width = '100%';
     grid.style.boxSizing = 'border-box';
+    grid.style.justifyItems = 'center';
+    grid.style.alignItems = 'start';
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -173,9 +181,11 @@
     const grid = document.createElement('div');
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(120px, 1fr))';
-    grid.style.gap = '10px';
+    grid.style.gap = '8px';
     grid.style.width = '100%';
     grid.style.boxSizing = 'border-box';
+    grid.style.justifyItems = 'center';
+    grid.style.alignItems = 'start';
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -210,8 +220,9 @@
     card.style.flexDirection = 'column';
     card.style.alignItems = 'center';
     card.style.justifyContent = 'flex-start';
-    card.style.padding = '4px 0';
+    card.style.padding = '4px 4px';
     card.style.width = '100%';
+    card.style.maxWidth = '100%';
     card.style.boxSizing = 'border-box';
 
     let figure = null;
@@ -234,7 +245,7 @@
       wrap.style.justifyContent = 'center';
       wrap.style.alignItems = 'flex-start';
       wrap.style.overflow = 'hidden';
-      try { figure.style.maxWidth = '100%'; } catch (e) {}
+      try { figure.style.maxWidth = '100%'; figure.style.width = '100%'; } catch (e) {}
       wrap.appendChild(figure);
       card.appendChild(wrap);
     }
@@ -257,6 +268,7 @@
     meta.style.opacity = '0.9';
     meta.style.textAlign = 'center';
     meta.style.wordBreak = 'break-word';
+    meta.style.overflowWrap = 'anywhere';
     meta.style.whiteSpace = 'normal';
     meta.style.maxWidth = '100%';
     const bits = [];
