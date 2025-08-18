@@ -49,12 +49,15 @@
     nav.appendChild(missingBtn);
     nav.appendChild(notMaxBtn);
 
-    const contentArea = api.ui.components.createScrollContainer({ height: '60vh', padding: true });
+    // Use a simple scroll container to avoid nested styled windows
+    const contentArea = document.createElement('div');
+    contentArea.style.maxHeight = '60vh';
+    contentArea.style.overflowY = 'auto';
+    contentArea.style.overflowX = 'hidden';
+    contentArea.style.padding = '8px';
+    contentArea.style.boxSizing = 'border-box';
     wrapper.appendChild(nav);
-    const contentHost = contentArea.element || contentArea;
-    contentHost.style.maxWidth = '100%';
-    contentHost.style.overflowX = 'hidden';
-    contentHost.style.boxSizing = 'border-box';
+    const contentHost = contentArea;
     wrapper.appendChild(contentHost);
 
     const renderMissing = () => {
@@ -101,14 +104,9 @@
   function setActive(btn, val) { if (btn && btn._setActive) btn._setActive(val); }
 
   function replaceContent(scroll, node) {
-    if (scroll.clearContent) scroll.clearContent();
-    const host = scroll.element || scroll;
+    const host = scroll;
     while (host.firstChild) host.removeChild(host.firstChild);
-    if (scroll.addContent) {
-      scroll.addContent(node);
-    } else {
-      host.appendChild(node);
-    }
+    host.appendChild(node);
   }
 
   function getOwnedBySpecies() {
@@ -375,7 +373,7 @@
         const data = utils.getMonster(id);
         const nm = data?.metadata?.name;
         if (nm) {
-          map.set(String(nm).toLowerCase(), id);
+          map.set(normalizeNameKey(nm), id);
           consecutiveFailures = 0;
         } else {
           consecutiveFailures++;
