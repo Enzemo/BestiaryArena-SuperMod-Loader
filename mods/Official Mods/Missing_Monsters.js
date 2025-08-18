@@ -54,19 +54,11 @@
     nav.appendChild(missingBtn);
     nav.appendChild(notMaxBtn);
 
-    // Content area (simple, scrollable)
-    const contentArea = document.createElement('div');
-    contentArea.className = 'mm-content';
-    contentArea.style.height = '420px';
-    contentArea.style.overflowY = 'auto';
-    contentArea.style.overflowX = 'hidden';
-    contentArea.style.padding = '8px';
-    contentArea.style.boxSizing = 'border-box';
-    contentArea.style.width = '100%';
-    contentArea.style.maxWidth = '100%';
+    // Content area (use standardized scroll container from UI components)
+    const contentArea = api.ui.components.createScrollContainer({ height: '60vh', padding: true });
 
     wrapper.appendChild(nav);
-    wrapper.appendChild(contentArea);
+    wrapper.appendChild(contentArea.element || contentArea);
 
     const renderMissing = () => {
       replaceContent(contentArea, renderMissingMonsters());
@@ -107,7 +99,16 @@
     return btn;
   }
   function setActive(btn, val) { if (btn && btn._setActive) btn._setActive(val); }
-  function replaceContent(host, node) { while (host.firstChild) host.removeChild(host.firstChild); host.appendChild(node); }
+  function replaceContent(scroll, node) {
+    if (scroll && scroll.clearContent) scroll.clearContent();
+    const host = scroll.element || scroll;
+    while (host.firstChild) host.removeChild(host.firstChild);
+    if (scroll && scroll.addContent) {
+      scroll.addContent(node);
+    } else {
+      host.appendChild(node);
+    }
+  }
 
   function getOwnedBySpecies() {
     try {
