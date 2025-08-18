@@ -30,7 +30,7 @@
 
     const wrapper = document.createElement('div');
     wrapper.style.minWidth = '520px';
-    wrapper.style.maxWidth = '100%';
+    wrapper.style.maxWidth = '560px';
     wrapper.style.width = '100%';
     wrapper.style.boxSizing = 'border-box';
 
@@ -49,7 +49,7 @@
     const contentArea = api.ui.components.createScrollContainer({ height: '60vh', padding: true });
     const contentHost = contentArea.element || contentArea;
     contentHost.style.width = '100%';
-    contentHost.style.maxWidth = '100%';
+    contentHost.style.maxWidth = '560px';
     contentHost.style.boxSizing = 'border-box';
     contentHost.style.overflowX = 'hidden';
     wrapper.appendChild(nav);
@@ -111,8 +111,9 @@
 
   function getOwnedBySpecies() {
     try {
-      const playerCtx = globalThis.state?.player?.getSnapshot()?.context;
-      const monsters = Array.isArray(playerCtx?.monsters) ? playerCtx.monsters : [];
+      const snap = globalThis.state?.player?.getSnapshot?.();
+      const ctx = snap?.context;
+      const monsters = Array.isArray(ctx?.monsters) ? ctx.monsters : [];
       const map = new Map(); // gameId -> { maxTier, count }
       for (const m of monsters) {
         if (!m || typeof m.gameId !== 'number') continue;
