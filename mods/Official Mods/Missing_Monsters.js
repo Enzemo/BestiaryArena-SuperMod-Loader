@@ -26,6 +26,7 @@
   });
 
   async function buildModal() {
+    ensureStyles();
     await waitForUtils(1200);
     await ensureDataLoaded();
 
@@ -53,6 +54,7 @@
 
     // Content area (simple, scrollable)
     const contentArea = document.createElement('div');
+    contentArea.className = 'mm-content';
     contentArea.style.height = '420px';
     contentArea.style.overflowY = 'auto';
     contentArea.style.overflowX = 'hidden';
@@ -126,13 +128,7 @@
   function renderMissingMonsters() {
     const container = document.createElement('div');
     const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
-    grid.style.gap = '8px';
-    grid.style.width = '100%';
-    grid.style.boxSizing = 'border-box';
-    grid.style.justifyItems = 'center';
-    grid.style.alignItems = 'start';
+    grid.className = 'mm-grid';
 
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
@@ -179,13 +175,7 @@
   function renderNotMaxTier() {
     const container = document.createElement('div');
     const grid = document.createElement('div');
-    grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
-    grid.style.gap = '8px';
-    grid.style.width = '100%';
-    grid.style.boxSizing = 'border-box';
-    grid.style.justifyItems = 'center';
-    grid.style.alignItems = 'start';
+    grid.className = 'mm-grid';
 
     const ownedSpecies = getOwnedBySpecies();
     const list = [];
@@ -216,6 +206,7 @@
 
   function renderMonsterCard(gameId, name, location, tierOrNull) {
     const card = document.createElement('div');
+    card.className = 'mm-card';
     card.style.display = 'flex';
     card.style.flexDirection = 'column';
     card.style.alignItems = 'center';
@@ -277,6 +268,19 @@
     if (bits.length) { meta.textContent = bits.join(' · '); card.appendChild(meta); }
 
     return card;
+  }
+
+  function ensureStyles() {
+    if (document.getElementById('mm-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'mm-styles';
+    style.textContent = `
+      .mm-content{height:420px;overflow-y:auto;overflow-x:hidden;padding:8px;box-sizing:border-box;width:100%;max-width:100%;}
+      .mm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:8px;width:100%;box-sizing:border-box;justify-items:center;align-items:start}
+      .mm-card{width:100%;max-width:100%;box-sizing:border-box}
+      .mm-card img{max-width:100%;height:auto;}
+    `;
+    document.head.appendChild(style);
   }
 
   async function ensureDataLoaded() {
