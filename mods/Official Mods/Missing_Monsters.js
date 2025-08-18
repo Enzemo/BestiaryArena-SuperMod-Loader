@@ -26,6 +26,8 @@
   });
 
   async function buildModal() {
+    // Try to let game utils initialize briefly to improve enumeration
+    await waitForUtils(1500);
     await ensureDataLoaded();
 
     const wrapper = document.createElement('div');
@@ -131,7 +133,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
     grid.style.gap = '10px';
     grid.style.width = '100%';
     grid.style.boxSizing = 'border-box';
@@ -139,12 +141,26 @@
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
 
-    const entries = [];
+    let entries = [];
     for (const name of cache.wikiNames || []) {
       if (!name) continue;
       const id = findIdForName(name);
       const isOwned = typeof id === 'number' ? ownedIds.has(id) : false;
       if (!isOwned) entries.push({ name, id });
+    }
+    // If still empty, derive candidates from utils when available
+    if (entries.length === 0 && globalThis.state?.utils?.getMonster) {
+      const utils = globalThis.state.utils;
+      const candidates = [];
+      let misses = 0;
+      for (let i = 1; i <= 1000 && misses < 30; i++) {
+        try {
+          const d = utils.getMonster(i);
+          const nm = d?.metadata?.name;
+          if (nm) { candidates.push({ name: nm, id: i }); misses = 0; } else { misses++; }
+        } catch (e) { misses++; }
+      }
+      entries = candidates.filter(c => !ownedIds.has(c.id));
     }
 
     entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -188,7 +204,7 @@
     const container = document.createElement('div');
     const grid = document.createElement('div');
     grid.style.display = 'grid';
-    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(140px, 1fr))';
     grid.style.gap = '10px';
     grid.style.width = '100%';
     grid.style.boxSizing = 'border-box';
@@ -252,8 +268,9 @@
     card.style.padding = '4px 0';
 
     let figure = null;
-    if (typeof gameId === 'number' && api?.ui?.components?.createFullMonster) {
-      try { figure = api.ui.components.createFullMonster({ monsterId: gameId, tier: 1 }); } catch (e) {}
+    // Prefer compact portrait to avoid overflow
+    if (typeof gameId === 'number' && api?.ui?.components?.createMonsterPortrait) {
+      try { figure = api.ui.components.createMonsterPortrait({ monsterId: gameId, level: 1, tier: 1 }); } catch (e) {}
     }
     if (!figure) {
       // Fall back to name-only, never show ID if name is missing
@@ -269,8 +286,6 @@
       wrap.style.alignItems = 'flex-start';
       wrap.style.overflow = 'hidden';
       try {
-        figure.style.transform = 'scale(0.9)';
-        figure.style.transformOrigin = 'top center';
         figure.style.maxWidth = '100%';
       } catch (e) {}
       wrap.appendChild(figure);
@@ -299,6 +314,15 @@
     }
 
     return card;
+  }
+  
+  async function waitForUtils(ms) {
+    const start = Date.now();
+    while (Date.now() - start < ms) {
+      if (globalThis.state?.utils?.getMonster) return true;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
   }
 
   async function ensureDataLoaded() {
