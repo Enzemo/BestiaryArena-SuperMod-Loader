@@ -30,6 +30,9 @@
 
     const wrapper = document.createElement('div');
     wrapper.style.minWidth = '520px';
+    wrapper.style.maxWidth = '100%';
+    wrapper.style.width = '100%';
+    wrapper.style.boxSizing = 'border-box';
 
     // Nav buttons
     const nav = document.createElement('div');
@@ -44,8 +47,13 @@
     nav.appendChild(notMaxBtn);
 
     const contentArea = api.ui.components.createScrollContainer({ height: '60vh', padding: true });
+    const contentHost = contentArea.element || contentArea;
+    contentHost.style.width = '100%';
+    contentHost.style.maxWidth = '100%';
+    contentHost.style.boxSizing = 'border-box';
+    contentHost.style.overflowX = 'hidden';
     wrapper.appendChild(nav);
-    wrapper.appendChild(contentArea.element || contentArea);
+    wrapper.appendChild(contentHost);
 
     const renderMissing = () => {
       const node = renderMissingMonsters();
@@ -129,12 +137,26 @@
     const ownedSpecies = getOwnedBySpecies();
     const ownedIds = new Set(ownedSpecies.keys());
 
-    const entries = [];
+    let entries = [];
     for (const name of cache.wikiNames || []) {
       if (!name) continue;
       const id = cache.nameToId?.get(name.toLowerCase()) ?? null;
       const isOwned = typeof id === 'number' ? ownedIds.has(id) : false;
       if (!isOwned) entries.push({ name, id });
+    }
+    // Fallback: if wiki or mapping is empty, enumerate known IDs via utils
+    if (entries.length === 0 && globalThis.state?.utils?.getMonster) {
+      const utils = globalThis.state.utils;
+      const candidates = [];
+      let misses = 0;
+      for (let i = 1; i <= 1200 && misses < 20; i++) {
+        try {
+          const d = utils.getMonster(i);
+          const nm = d?.metadata?.name;
+          if (nm) { candidates.push({ name: nm, id: i }); misses = 0; } else { misses++; }
+        } catch (e) { misses++; }
+      }
+      entries = candidates.filter(c => !ownedIds.has(c.id));
     }
 
     entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -161,12 +183,11 @@
     grid.style.gap = '10px';
 
     const ownedSpecies = getOwnedBySpecies();
-    const utils = globalThis.state?.utils;
     const list = [];
     for (const [gameId, info] of ownedSpecies.entries()) {
       if ((info.maxTier || 0) < 4) {
         let name = null;
-        try { name = utils?.getMonster?.(gameId)?.metadata?.name || null; } catch (e) {}
+        try { name = globalThis.state?.utils?.getMonster?.(gameId)?.metadata?.name || null; } catch (e) {}
         if (!name) continue; // Do not show ID-only entries
         const loc = cache.locationMap?.get(name.toLowerCase()) || null;
         list.push({ id: gameId, name, tier: info.maxTier || 0, location: loc });
@@ -178,7 +199,7 @@
     const header = document.createElement('div');
     header.className = 'pixel-font-16';
     header.style.margin = '0 0 6px 0';
-    header.textContent = `Owned but not max tier (5): ${list.length}`;
+    header.textContent = `Owned but not max tier (4): ${list.length}`;
     container.appendChild(header);
 
     for (const m of list) {
@@ -198,8 +219,8 @@
     card.style.padding = '4px 0';
 
     let figure = null;
-    if (typeof gameId === 'number' && api?.ui?.components?.createFullMonster) {
-      try { figure = api.ui.components.createFullMonster({ monsterId: gameId, tier: 1 }); } catch (e) {}
+    if (typeof gameId === 'number' && api?.ui?.components?.createMonsterPortrait) {
+      try { figure = api.ui.components.createMonsterPortrait({ monsterId: gameId, level: 1, tier: 1 }); } catch (e) {}
     }
     if (!figure) {
       // Fall back to name-only, never show ID if name is missing
