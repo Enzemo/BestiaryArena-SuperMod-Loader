@@ -12,6 +12,7 @@ OUTPUT_CSV = Path("/workspace/bestiary_bakurraa.csv")
 DEBUG_HTML = Path("/workspace/bestiary_section.html")
 DEBUG_PNG = Path("/workspace/bestiary_section.png")
 NEXT_DATA_JSON = Path("/workspace/next_data.json")
+BESTIARY_NEXT_DATA_JSON = Path("/workspace/bestiary_next_data.json")
 
 
 async def locate_bestiary_container(page: Page):
@@ -244,6 +245,15 @@ async def main() -> int:
         except Exception:
             pass
 
+        # Navigate to general Bestiary page and dump global data
+        try:
+            await page.goto("https://bestiaryarena.com/bestiary", wait_until="networkidle")
+            bestiary_data = await page.evaluate("() => JSON.stringify(window.__NEXT_DATA__)")
+            if bestiary_data:
+                BESTIARY_NEXT_DATA_JSON.write_text(bestiary_data)
+        except Exception:
+            pass
+
         # Ensure the main content is rendered and scroll to load any lazy content
         try:
             await page.get_by_text("Bestiary", exact=False).first.wait_for(timeout=5000)
@@ -256,22 +266,120 @@ async def main() -> int:
         except Exception:
             pass
 
-        container = await locate_bestiary_container(page)
-        await dump_debug(container)
-        pairs = await extract_name_tier_pairs(container, page)
+        # Try to build name list from Next.js data first (more reliable)
+        names_only: List[str] = []
+        try:
+            import json
+            profile_data = json.loads(NEXT_DATA_JSON.read_text())
+            bestiary_data = json.loads(BESTIARY_NEXT_DATA_JSON.read_text()) if BESTIARY_NEXT_DATA_JSON.exists() else {}
+            # Collect gameIds from profile monsters
+            profile_game_ids = []
+            try:
+                profile_game_ids = [int(m.get("gameId")) for m in profile_data["props"]["pageProps"]["pageData"].get("monsters", []) if m.get("gameId") is not None]
+            except Exception:
+                profile_game_ids = []
 
-        unique = sorted({(n, t) for (n, t) in pairs}, key=lambda x: (x[0].lower(), x[1]))
-        with OUTPUT_CSV.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["name", "tier"])
-            writer.writerows(unique)
+            # Attempt to find a mapping of id->name in bestiary_data
+            id_to_name: dict[int, str] = {}
+
+            def traverse(obj):
+                if isinstance(obj, dict):
+                    # Common patterns: objects with keys 'id' and 'name' or 'gameId' and 'name'
+                    if ("id" in obj or "gameId" in obj) and "name" in obj and isinstance(obj["name"], str):
+                        try:
+                            key = int(obj.get("gameId", obj.get("id")))
+                            if key not in id_to_name and obj["name"].strip():
+                                id_to_name[key] = obj["name"].strip()
+                        except Exception:
+                            pass
+                    for v in obj.values():
+                        traverse(v)
+                elif isinstance(obj, list):
+                    for v in obj:
+                        traverse(v)
+
+            traverse(bestiary_data)
+
+            found_ids = set(id_to_name.keys())
+            needed_ids = sorted(set(profile_game_ids))
+            names_only = [id_to_name[g] for g in needed_ids if g in id_to_name]
+
+            # If some names are missing, probe potential API endpoints
+            missing_ids = [g for g in needed_ids if g not in found_ids]
+            if missing_ids:
+                endpoint_patterns = [
+                    "https://bestiaryarena.com/api/monster/{id}",
+                    "https://bestiaryarena.com/api/monsters/{id}",
+                    "https://bestiaryarena.com/api/creature/{id}",
+                    "https://bestiaryarena.com/api/creatures/{id}",
+                    "https://bestiaryarena.com/api/wiki/monster/{id}",
+                    "https://bestiaryarena.com/api/wiki/creature/{id}",
+                ]
+                for gid in missing_ids:
+                    name_for_id = None
+                    for pattern in endpoint_patterns:
+                        url = pattern.format(id=gid)
+                        try:
+                            resp = await context.request.get(url)
+                            if resp.ok:
+                                try:
+                                    data = await resp.json()
+                                except Exception:
+                                    try:
+                                        txt = await resp.text()
+                                        import json as _json
+                                        data = _json.loads(txt)
+                                    except Exception:
+                                        data = None
+                                if isinstance(data, dict):
+                                    for key in ("name", "title", "monsterName", "displayName"):
+                                        if isinstance(data.get(key), str) and data.get(key).strip():
+                                            name_for_id = data[key].strip()
+                                            break
+                                    if not name_for_id:
+                                        # Try nested structures
+                                        for k, v in data.items():
+                                            if isinstance(v, dict) and isinstance(v.get("name"), str):
+                                                name_for_id = v["name"].strip()
+                                                break
+                                if name_for_id:
+                                    id_to_name[gid] = name_for_id
+                                    break
+                        except Exception:
+                            continue
+                names_only = [id_to_name[g] for g in needed_ids if g in id_to_name]
+        except Exception:
+            names_only = []
+
+        if names_only:
+            with OUTPUT_CSV.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["name"]) 
+                for n in names_only:
+                    writer.writerow([n])
+        else:
+            # Fallback to interactive extraction (may be partial)
+            container = await locate_bestiary_container(page)
+            await dump_debug(container)
+            pairs = await extract_name_tier_pairs(container, page)
+            # Keep only names
+            names = sorted({n for (n, _t) in pairs})
+            with OUTPUT_CSV.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["name"]) 
+                for n in names:
+                    writer.writerow([n])
 
         await context.close()
         await browser.close()
 
-    print(f"Wrote {len(unique)} rows to {OUTPUT_CSV}")
-    if not unique:
-        print("No rows extracted. See debug artifacts:", DEBUG_HTML, DEBUG_PNG)
+    try:
+        rows = sum(1 for _ in OUTPUT_CSV.open("r", encoding="utf-8")) - 1
+    except Exception:
+        rows = 0
+    print(f"Wrote {rows} rows to {OUTPUT_CSV}")
+    if rows <= 0:
+        print("No rows extracted. See debug artifacts:", DEBUG_HTML, DEBUG_PNG, BESTIARY_NEXT_DATA_JSON)
         return 2
     return 0
 
